@@ -151,6 +151,13 @@ function fetchCurrentPrice(stockCode) {
   try {
     var codeStr = stockCode.toString().trim();
     
+    // 한국 주식 코드 판별 및 0 패딩 (숫자로만 이루어진 경우 6자리 맞춤)
+    if (/^\d+$/.test(codeStr)) {
+      while (codeStr.length < 6) {
+        codeStr = "0" + codeStr;
+      }
+    }
+    
     // 1. 한국 주식 코드 판별 (숫자 6자리)
     if (/^\d{6}$/.test(codeStr)) {
       var url = "https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:" + codeStr;
@@ -176,6 +183,55 @@ function fetchCurrentPrice(stockCode) {
     }
     
     return { success: false, message: '주가 정보를 찾을 수 없습니다.' };
+  } catch (e) {
+    return { success: false, message: '에러 발생: ' + e.message };
+  }
+}
+
+/**
+ * Portfolio 시트의 모든 종목에 대해 오늘 시세를 조회하여 현재가(F열)를 갱신합니다.
+ */
+function updatePortfolioPrices() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Portfolio');
+    if (!sheet) {
+      throw new Error('Portfolio 시트를 찾을 수 없습니다. 상단 메뉴에서 초기 설정을 먼저 진행해주세요.');
+    }
+    
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, count: 0, message: '조회할 종목이 없습니다.' };
+    }
+    
+    // A열(종목코드) 가져오기
+    var range = sheet.getRange(2, 1, lastRow - 1, 1);
+    var codes = range.getValues();
+    
+    var updatedCount = 0;
+    var errors = [];
+    
+    for (var i = 0; i < codes.length; i++) {
+      var stockCode = codes[i][0];
+      if (!stockCode) continue;
+      
+      // 시세 조회
+      var result = fetchCurrentPrice(stockCode);
+      if (result && result.success) {
+        // F열 (현재가)에 값 입력 (2행부터 시작하므로 인덱스는 i + 2)
+        sheet.getRange(i + 2, 6).setValue(result.price);
+        updatedCount++;
+      } else {
+        errors.push(stockCode + ": " + (result.message || '조회 실패'));
+      }
+    }
+    
+    return { 
+      success: true, 
+      count: updatedCount, 
+      total: codes.filter(function(c) { return c[0]; }).length,
+      errors: errors 
+    };
   } catch (e) {
     return { success: false, message: '에러 발생: ' + e.message };
   }

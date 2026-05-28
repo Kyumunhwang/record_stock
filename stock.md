@@ -262,6 +262,13 @@ function fetchCurrentPrice(stockCode) {
   try {
     var codeStr = stockCode.toString().trim();
     
+    // 한국 주식 코드 판별 및 0 패딩 (숫자로만 이루어진 경우 6자리 맞춤)
+    if (/^\d+$/.test(codeStr)) {
+      while (codeStr.length < 6) {
+        codeStr = "0" + codeStr;
+      }
+    }
+    
     // 1. 한국 주식 코드 판별 (숫자 6자리)
     if (/^\d{6}$/.test(codeStr)) {
       var url = "https://polling.finance.naver.com/api/realtime?query=SERVICE_ITEM:" + codeStr;
@@ -287,6 +294,55 @@ function fetchCurrentPrice(stockCode) {
     }
     
     return { success: false, message: '주가 정보를 찾을 수 없습니다.' };
+  } catch (e) {
+    return { success: false, message: '에러 발생: ' + e.message };
+  }
+}
+
+/**
+ * Portfolio 시트의 모든 종목에 대해 오늘 시세를 조회하여 현재가(F열)를 갱신합니다.
+ */
+function updatePortfolioPrices() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Portfolio');
+    if (!sheet) {
+      throw new Error('Portfolio 시트를 찾을 수 없습니다. 상단 메뉴에서 초기 설정을 먼저 진행해주세요.');
+    }
+    
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, count: 0, message: '조회할 종목이 없습니다.' };
+    }
+    
+    // A열(종목코드) 가져오기
+    var range = sheet.getRange(2, 1, lastRow - 1, 1);
+    var codes = range.getValues();
+    
+    var updatedCount = 0;
+    var errors = [];
+    
+    for (var i = 0; i < codes.length; i++) {
+      var stockCode = codes[i][0];
+      if (!stockCode) continue;
+      
+      // 시세 조회
+      var result = fetchCurrentPrice(stockCode);
+      if (result && result.success) {
+        // F열 (현재가)에 값 입력 (2행부터 시작하므로 인덱스는 i + 2)
+        sheet.getRange(i + 2, 6).setValue(result.price);
+        updatedCount++;
+      } else {
+        errors.push(stockCode + ": " + (result.message || '조회 실패'));
+      }
+    }
+    
+    return { 
+      success: true, 
+      count: updatedCount, 
+      total: codes.filter(function(c) { return c[0]; }).length,
+      errors: errors 
+    };
   } catch (e) {
     return { success: false, message: '에러 발생: ' + e.message };
   }
@@ -675,6 +731,20 @@ function NAVERPRICE(stockCode) {
     </form>
   </div>
 
+  <!-- 포트폴리오 관리 카드 -->
+  <div class="card">
+    <label style="margin-bottom: 8px; display: block; font-size: 11px; font-weight: 700; color: var(--accent-color); letter-spacing: 1px;">포트폴리오 관리</label>
+    <p style="font-size: 12px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.4;">
+      보유 중인 모든 종목의 오늘 시세를 실시간 조회하여 포트폴리오 현황을 최신으로 갱신합니다.
+    </p>
+    <button type="button" class="btn-submit" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);" onclick="updatePortfolio(event)">
+      오늘 시세 일괄 반영
+    </button>
+    <div id="portfolioStatus" style="font-size: 11px; color: var(--text-sub); margin-top: 10px; text-align: center; display: none; line-height: 1.4;">
+      <!-- 결과 메시지 노출 -->
+    </div>
+  </div>
+
   <!-- 로딩 오버레이 -->
   <div id="loading" class="loading-overlay">
     <div class="spinner"></div>
@@ -843,6 +913,51 @@ function NAVERPRICE(stockCode) {
       setTimeout(function() {
         toast.style.display = 'none';
       }, 4000);
+    }
+
+    function updatePortfolio(event) {
+      const statusDiv = document.getElementById('portfolioStatus');
+      const btn = event.currentTarget || document.querySelector('button[onclick="updatePortfolio(event)"]');
+      
+      btn.disabled = true;
+      const originalText = btn.innerText;
+      btn.innerText = '시세 반영 중...';
+      btn.style.opacity = '0.7';
+      
+      statusDiv.style.display = 'block';
+      statusDiv.style.color = 'var(--text-sub)';
+      statusDiv.innerText = '현재가를 가져오는 중입니다...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          btn.innerText = originalText;
+          btn.style.opacity = '1';
+          
+          if (result && result.success) {
+            let msg = `성공적으로 ${result.count}개 종목의 시세를 갱신했습니다.`;
+            if (result.errors && result.errors.length > 0) {
+              msg += `<br><span style="color:var(--danger-color); font-size:10px;">실패 종목: ${result.errors.join(', ')}</span>`;
+            }
+            statusDiv.style.color = 'var(--success-color)';
+            statusDiv.innerHTML = msg;
+            showToast('포트폴리오 시세 갱신 완료!', 'success');
+          } else {
+            statusDiv.style.color = 'var(--danger-color)';
+            statusDiv.innerText = '시세 갱신 중 오류가 발생했습니다.';
+            showToast('시세 갱신 실패', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = originalText;
+          btn.style.opacity = '1';
+          
+          statusDiv.style.color = 'var(--danger-color)';
+          statusDiv.innerText = '에러: ' + err.message;
+          showToast('에러 발생: ' + err.message, 'error');
+        })
+        .updatePortfolioPrices();
     }
   </script>
 </body>

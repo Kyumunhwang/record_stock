@@ -347,6 +347,20 @@
     </form>
   </div>
 
+  <!-- 포트폴리오 관리 카드 -->
+  <div class="card">
+    <label style="margin-bottom: 8px; display: block; font-size: 11px; font-weight: 700; color: var(--accent-color); letter-spacing: 1px;">포트폴리오 관리</label>
+    <p style="font-size: 12px; color: var(--text-sub); margin-bottom: 12px; line-height: 1.4;">
+      보유 중인 모든 종목의 오늘 시세를 실시간 조회하여 포트폴리오 현황을 최신으로 갱신합니다.
+    </p>
+    <button type="button" class="btn-submit" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);" onclick="updatePortfolio(event)">
+      오늘 시세 일괄 반영
+    </button>
+    <div id="portfolioStatus" style="font-size: 11px; color: var(--text-sub); margin-top: 10px; text-align: center; display: none; line-height: 1.4;">
+      <!-- 결과 메시지 노출 -->
+    </div>
+  </div>
+
   <!-- 로딩 오버레이 -->
   <div id="loading" class="loading-overlay">
     <div class="spinner"></div>
@@ -515,6 +529,51 @@
       setTimeout(function() {
         toast.style.display = 'none';
       }, 4000);
+    }
+
+    function updatePortfolio(event) {
+      const statusDiv = document.getElementById('portfolioStatus');
+      const btn = event.currentTarget || document.querySelector('button[onclick="updatePortfolio(event)"]');
+      
+      btn.disabled = true;
+      const originalText = btn.innerText;
+      btn.innerText = '시세 반영 중...';
+      btn.style.opacity = '0.7';
+      
+      statusDiv.style.display = 'block';
+      statusDiv.style.color = 'var(--text-sub)';
+      statusDiv.innerText = '현재가를 가져오는 중입니다...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.disabled = false;
+          btn.innerText = originalText;
+          btn.style.opacity = '1';
+          
+          if (result && result.success) {
+            let msg = `성공적으로 ${result.count}개 종목의 시세를 갱신했습니다.`;
+            if (result.errors && result.errors.length > 0) {
+              msg += `<br><span style="color:var(--danger-color); font-size:10px;">실패 종목: ${result.errors.join(', ')}</span>`;
+            }
+            statusDiv.style.color = 'var(--success-color)';
+            statusDiv.innerHTML = msg;
+            showToast('포트폴리오 시세 갱신 완료!', 'success');
+          } else {
+            statusDiv.style.color = 'var(--danger-color)';
+            statusDiv.innerText = '시세 갱신 중 오류가 발생했습니다.';
+            showToast('시세 갱신 실패', 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = originalText;
+          btn.style.opacity = '1';
+          
+          statusDiv.style.color = 'var(--danger-color)';
+          statusDiv.innerText = '에러: ' + err.message;
+          showToast('에러 발생: ' + err.message, 'error');
+        })
+        .updatePortfolioPrices();
     }
   </script>
 </body>
