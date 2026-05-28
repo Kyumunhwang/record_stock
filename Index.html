@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- Google Font 로드 -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #f0f7ff 0%, #e0e7ff 100%);
+      --card-bg: rgba(255, 255, 255, 0.82);
+      --border-color: rgba(99, 102, 241, 0.12);
+      --text-main: #1e293b;
+      --text-sub: #64748b;
+      --accent-color: #4f46e5;
+      --accent-glow: #6366f1;
+      --success-color: #10b981;
+      --danger-color: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      padding: 20px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 프리미엄 로고/헤더 */
+    .header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .header h2 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #4f46e5, #0ea5e9);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    /* 모던 카드 레이아웃 */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.1);
+      margin-bottom: 16px;
+    }
+
+    /* 폼 스타일링 */
+    .form-group {
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--text-main);
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+      background: #ffffff;
+    }
+
+    /* 구분 매수/매도 토글 버튼 */
+    .type-toggle {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: rgba(255, 255, 255, 0.5);
+      color: #64748b;
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .toggle-btn.active.buy {
+      background: #ecfdf5;
+      border-color: var(--success-color);
+      color: #047857;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.12);
+    }
+
+    .toggle-btn.active.sell {
+      background: #fef2f2;
+      border-color: var(--danger-color);
+      color: #b91c1c;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.12);
+    }
+
+    /* 자동계산 거래 요약 대시보드 */
+    .summary-box {
+      background: rgba(99, 102, 241, 0.05);
+      border-radius: 12px;
+      padding: 14px;
+      border-left: 4px solid var(--accent-color);
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .summary-label {
+      color: var(--text-sub);
+    }
+
+    .summary-val {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .total-price {
+      font-size: 16px;
+      color: #4f46e5;
+      font-weight: 700;
+    }
+
+    /* 버튼 스타일 */
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    /* 로딩 및 알림 */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.85);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 12px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0, 0, 0, 0.05);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .toast {
+      display: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 12px;
+      text-align: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .toast.success {
+      background: #ecfdf5;
+      border: 1px solid var(--success-color);
+      color: #047857;
+      display: block;
+    }
+
+    .toast.error {
+      background: #fef2f2;
+      border: 1px solid var(--danger-color);
+      color: #b91c1c;
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 기존 종목 칩 디자인 */
+    .stock-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .stock-chip {
+      background: rgba(79, 70, 229, 0.05);
+      border: 1px solid rgba(79, 70, 229, 0.1);
+      color: #4f46e5;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .stock-chip:hover {
+      background: rgba(79, 70, 229, 0.12);
+      border-color: var(--accent-color);
+      color: #312e81;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>STOCK PORTFOLIO</h2>
+    <p>거래 내역 및 인사이트 기록기</p>
+  </div>
+
+  <div id="toastBox" class="toast" style="display:none;"></div>
+
+  <div class="card">
+    <!-- 매수/매도 토글 -->
+    <label>거래 구분</label>
+    <div class="type-toggle">
+      <div id="btnBuy" class="toggle-btn active buy" onclick="setType('매수')">매수</div>
+      <div id="btnSell" class="toggle-btn sell" onclick="setType('매도')">매도</div>
+    </div>
+
+    <!-- 폼 필드 -->
+    <form id="txForm" onsubmit="submitForm(event)">
+      <input type="hidden" id="txType" name="type" value="매수">
+
+      <div class="form-group">
+        <label for="date">거래 날짜</label>
+        <input type="date" id="date" required>
+      </div>
+
+      <div class="form-group">
+        <label for="stockCode">종목코드 / 티커</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="stockCode" placeholder="예: AAPL 또는 005930" required onchange="onCodeChange()">
+          <button type="button" class="toggle-btn" style="flex: 0 0 80px; font-size: 11px; padding: 0 8px;" onclick="checkCurrentPrice()">시세 조회</button>
+        </div>
+        <div id="suggestions" class="stock-suggestions">
+          <!-- 기존 등록 종목이 여기에 로드됩니다 -->
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="stockName">종목명</label>
+        <input type="text" id="stockName" placeholder="종목명" required>
+      </div>
+
+      <div class="form-group" style="display: flex; gap: 10px;">
+        <div style="flex: 1;">
+          <label for="quantity">수량 (주)</label>
+          <input type="number" id="quantity" step="any" placeholder="0" required oninput="calculateTotal()">
+        </div>
+        <div style="flex: 1.2;">
+          <label for="price">거래 단가</label>
+          <input type="number" id="price" step="any" placeholder="0" required oninput="calculateTotal()">
+        </div>
+      </div>
+
+      <!-- 실시간 거래 요약 정보 -->
+      <div class="summary-box">
+        <div class="summary-row">
+          <span class="summary-label">예상 거래 대금</span>
+          <span id="lblTotal" class="summary-val total-price">0 원</span>
+        </div>
+        <div id="livePriceRow" class="summary-row" style="display: none; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px; margin-top: 4px;">
+          <span class="summary-label">실시간 현재가</span>
+          <span id="lblLivePrice" class="summary-val" style="color: #34d399;">-</span>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label for="reason">매매 이유 / 생각 기록</label>
+        <textarea id="reason" rows="3" placeholder="왜 이 시점에 매수/매도했나요? 아이디어를 기록해보세요." required></textarea>
+      </div>
+
+      <button type="submit" class="btn-submit">거래 내역 등록</button>
+    </form>
+  </div>
+
+  <!-- 로딩 오버레이 -->
+  <div id="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <p style="font-size: 13px; color: var(--text-sub);">스프레드시트에 기록 중...</p>
+  </div>
+
+  <script>
+    // 오늘 날짜 기본값 지정
+    document.getElementById('date').value = new Date().toISOString().substring(0, 10);
+
+    let currentType = '매수';
+    let registeredStocks = [];
+
+    // 실행 시 기존 등록된 종목 리스트 불러오기 (자동완성용)
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(function(stocks) {
+          registeredStocks = stocks;
+          renderChips();
+        })
+        .getUniqueStocks();
+    };
+
+    function setType(type) {
+      currentType = type;
+      document.getElementById('txType').value = type;
+      
+      const btnBuy = document.getElementById('btnBuy');
+      const btnSell = document.getElementById('btnSell');
+      
+      if (type === '매수') {
+        btnBuy.classList.add('active');
+        btnSell.classList.remove('active');
+      } else {
+        btnBuy.classList.remove('active');
+        btnSell.classList.add('active');
+      }
+      calculateTotal();
+    }
+
+    // 종목 칩 생성
+    function renderChips() {
+      const container = document.getElementById('suggestions');
+      container.innerHTML = '';
+      
+      // 최대 5개 노출
+      const displayStocks = registeredStocks.slice(0, 5);
+      displayStocks.forEach(stock => {
+        const chip = document.createElement('span');
+        chip.className = 'stock-chip';
+        chip.innerText = `${stock.name} (${stock.code})`;
+        chip.onclick = function() {
+          document.getElementById('stockCode').value = stock.code;
+          document.getElementById('stockName').value = stock.name;
+          onCodeChange();
+        };
+        container.appendChild(chip);
+      });
+    }
+
+    // 종목코드 입력 시 기존 매칭 종목명 자동 매핑
+    function onCodeChange() {
+      const codeInput = document.getElementById('stockCode').value.trim();
+      const matched = registeredStocks.find(s => s.code.toLowerCase() === codeInput.toLowerCase());
+      if (matched) {
+        document.getElementById('stockName').value = matched.name;
+      }
+      checkCurrentPrice();
+    }
+
+    // 실시간 주가 조회
+    function checkCurrentPrice() {
+      const code = document.getElementById('stockCode').value.trim();
+      if (!code) return;
+      
+      const livePriceRow = document.getElementById('livePriceRow');
+      const lblLivePrice = document.getElementById('lblLivePrice');
+      
+      lblLivePrice.innerText = '조회 중...';
+      livePriceRow.style.display = 'flex';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.success) {
+            let priceFormatted = new Intl.NumberFormat().format(result.price);
+            lblLivePrice.innerText = `${priceFormatted} (${result.currency})`;
+            // 매수/매도 단가 자동 채우기 유도 가능 (선택적)
+          } else {
+            lblLivePrice.innerText = '조회 실패';
+          }
+        })
+        .fetchCurrentPrice(code);
+    }
+
+    // 예상 거래 금액 실시간 계산
+    function calculateTotal() {
+      const qty = parseFloat(document.getElementById('quantity').value) || 0;
+      const price = parseFloat(document.getElementById('price').value) || 0;
+      const total = qty * price;
+      
+      const formattedTotal = new Intl.NumberFormat().format(total);
+      
+      // 원화/달러 구분
+      const code = document.getElementById('stockCode').value.trim();
+      let currencyUnit = '원';
+      
+      // 영문 티커(미국주식) 판별
+      if (/^[a-zA-Z]/.test(code)) {
+        currencyUnit = ' USD';
+      }
+      
+      document.getElementById('lblTotal').innerText = `${formattedTotal} ${currencyUnit}`;
+    }
+
+    // 폼 전송
+    function submitForm(event) {
+      event.preventDefault();
+      
+      const loading = document.getElementById('loading');
+      loading.style.display = 'flex';
+      
+      const data = {
+        type: document.getElementById('txType').value,
+        date: document.getElementById('date').value,
+        stockCode: document.getElementById('stockCode').value.trim(),
+        stockName: document.getElementById('stockName').value.trim(),
+        quantity: document.getElementById('quantity').value,
+        price: document.getElementById('price').value,
+        reason: document.getElementById('reason').value
+      };
+      
+      google.script.run
+        .withSuccessHandler(function(response) {
+          loading.style.display = 'none';
+          if (response.success) {
+            showToast('거래 내역이 기록되었습니다!', 'success');
+            // 입력 폼 초기화 (종목명, 코드 등 일부 유지 가능하나 안전하게 리셋)
+            document.getElementById('quantity').value = '';
+            document.getElementById('price').value = '';
+            document.getElementById('reason').value = '';
+            document.getElementById('lblTotal').innerText = '0 원';
+            document.getElementById('livePriceRow').style.display = 'none';
+            
+            // 등록 종목 최신화
+            google.script.run
+              .withSuccessHandler(function(stocks) {
+                registeredStocks = stocks;
+                renderChips();
+              })
+              .getUniqueStocks();
+          }
+        })
+        .withFailureHandler(function(err) {
+          loading.style.display = 'none';
+          showToast('기록 실패: ' + err.message, 'error');
+        })
+        .addTransaction(data);
+    }
+
+    function showToast(message, type) {
+      const toast = document.getElementById('toastBox');
+      toast.className = `toast ${type}`;
+      toast.innerText = message;
+      toast.style.display = 'block';
+      
+      setTimeout(function() {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+  </script>
+</body>
+</html>
